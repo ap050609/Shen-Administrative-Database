@@ -1950,15 +1950,30 @@ function renderPackages(search) {
   search = search||'';
   var q = search.toLowerCase();
   var list = state.packages;
-  if (state.pkgStatusFilter!=='all') list = list.filter(function(p){return pkgStatus(p)===state.pkgStatusFilter;});
-  if (q) list = list.filter(function(p){
-    return clientName(p.clientID).toLowerCase().includes(q)||(p.cardNumber||''). toLowerCase().includes(q)||clientPhone(p.clientID).includes(q);
-  });
+
+  if (state.pkgStatusFilter!=='all')
+    list = list.filter(function(p){return pkgStatus(p)===state.pkgStatusFilter;});
+
+  if (q)
+    list = list.filter(function(p){
+      return clientName(p.clientID).toLowerCase().includes(q) ||
+        (p.cardNumber||'').toLowerCase().includes(q) ||
+        clientPhone(p.clientID).includes(q);
+    });
+
   document.getElementById('packages-count').textContent = list.length + ' package(s)';
   var tbody = document.getElementById('packages-tbody');
-  if (!list.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🎁</div><p>No packages found.</p></div></td></tr>'; return; }
+
+  if (!list.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🎁</div><p>No packages found.</p></div></td></tr>';
+    return;
+  }
+
   tbody.innerHTML = list.map(function(p) {
+
     var bal = p.remainingBalance||0;
+
     return '<tr>' +
       '<td><strong style="color:var(--teal)">'+(p.cardNumber||'—')+'</strong></td>' +
       '<td><strong>'+clientName(p.clientID)+'</strong><br><span style="color:var(--text3);font-size:0.8rem">'+clientPhone(p.clientID)+'</span></td>' +
@@ -1971,141 +1986,285 @@ function renderPackages(search) {
         '<button class="btn-icon" title="Extend Expiry" onclick="openExtend(\''+p.id+'\')">📅</button> ' +
         '<button class="btn-icon" title="Edit" onclick="editPackage(\''+p.id+'\')">✏️</button>' +
       '</td></tr>';
+
   }).join('');
 }
-function filterPackages() { renderPackages(document.getElementById('pkg-search').value); }
+
+function filterPackages() {
+  renderPackages(document.getElementById('pkg-search').value);
+}
+
 function filterPackageStatus(s, btn) {
   state.pkgStatusFilter = s;
-  document.querySelectorAll('#page-packages .tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('#page-packages .tab')
+    .forEach(function(t){t.classList.remove('active');});
   btn.classList.add('active');
   filterPackages();
 }
+
 function openNewPackage(prefillClientId) {
+
   document.getElementById('pkg-id').value = '';
   document.getElementById('pkg-client-search').value = '';
   document.getElementById('pkg-client-id').value = prefillClientId||'';
+
   document.getElementById('pkg-client-results').style.display = 'none';
   document.getElementById('pkg-client-selected').style.display = 'none';
+
   document.getElementById('pkg-card').value = '';
   document.getElementById('pkg-type').value = '';
   document.getElementById('pkg-paid').value = '';
   document.getElementById('pkg-value').value = '';
+
   document.getElementById('pkg-issue').value = todayStr();
   document.getElementById('pkg-expiry').value = '';
+
   document.getElementById('pkg-final-balance').value = '';
+
   document.getElementById('carryforward-section').style.display = 'none';
   cfBalance = 0;
+
   document.getElementById('pkg-modal-title').textContent = 'New Package';
+
   if (prefillClientId) {
     var c = state.clients.find(function(x){return x.id===prefillClientId;});
-    if (c) { selectClientForPkg(prefillClientId); }
+    if (c) selectClientForPkg(prefillClientId);
   }
+
   openModal('modal-package');
 }
+
 function editPackage(id) {
+
   var p = state.packages.find(function(x){return x.id===id;});
   if (!p) return;
+
   var c = state.clients.find(function(x){return x.id===p.clientID;});
-  document.getElementById('pkg-id').value            = p.id;
-  document.getElementById('pkg-client-search').value  = c ? c.name : '';
-  document.getElementById('pkg-client-id').value      = p.clientID;
-  document.getElementById('pkg-client-selected').textContent = c ? '✓ '+c.name+' — '+(c.phone||''): '';
-  document.getElementById('pkg-client-selected').style.display = c ? 'block' : 'none';
-  document.getElementById('pkg-card').value           = p.cardNumber||'';
-  document.getElementById('pkg-type').value           = p.packageType||'';
-  document.getElementById('pkg-paid').value           = p.amountPaid||'';
-  document.getElementById('pkg-value').value          = p.totalValue||'';
-  document.getElementById('pkg-issue').value          = p.issueDate||'';
-  document.getElementById('pkg-expiry').value         = p.expiryDate||'';
-  document.getElementById('pkg-final-balance').value  = p.remainingBalance||'';
+
+  document.getElementById('pkg-id').value = p.id;
+  document.getElementById('pkg-client-search').value = c ? c.name : '';
+  document.getElementById('pkg-client-id').value = p.clientID;
+
+  document.getElementById('pkg-client-selected').textContent =
+    c ? '✓ '+c.name+' — '+(c.phone||'') : '';
+
+  document.getElementById('pkg-client-selected').style.display = c ? 'block':'none';
+
+  document.getElementById('pkg-card').value = p.cardNumber||'';
+  document.getElementById('pkg-type').value = p.packageType||'';
+
+  document.getElementById('pkg-paid').value = p.amountPaid||'';
+  document.getElementById('pkg-value').value = p.totalValue||'';
+
+  document.getElementById('pkg-issue').value = p.issueDate||'';
+  document.getElementById('pkg-expiry').value = p.expiryDate||'';
+
+  document.getElementById('pkg-final-balance').value = p.remainingBalance||'';
+
   document.getElementById('carryforward-section').style.display = 'none';
+
   document.getElementById('pkg-modal-title').textContent = 'Edit Package';
+
   openModal('modal-package');
 }
+
 function autofillPackage() {
+
   var type = document.getElementById('pkg-type').value;
+
   if (PKG_DEFS[type]) {
     document.getElementById('pkg-paid').value  = PKG_DEFS[type].paid;
     document.getElementById('pkg-value').value = PKG_DEFS[type].value;
+
     autofillExpiry();
     updateCarryForward();
   }
 }
+
 function autofillExpiry() {
+
   var type  = document.getElementById('pkg-type').value;
   var issue = document.getElementById('pkg-issue').value;
+
   if (type && issue && PKG_DEFS[type]) {
-    document.getElementById('pkg-expiry').value = addMonths(issue, PKG_DEFS[type].months);
+    document.getElementById('pkg-expiry').value =
+      addMonths(issue, PKG_DEFS[type].months);
   }
+
   updateCarryForward();
 }
+
 function checkCarryForward(clientId) {
-  var prevPkgs = state.packages.filter(function(p){return p.clientID===clientId;});
-  if (!prevPkgs.length) { document.getElementById('carryforward-section').style.display='none'; cfBalance=0; return; }
+
+  var prevPkgs = state.packages.filter(function(p){
+    return p.clientID===clientId;
+  });
+
+  if (!prevPkgs.length) {
+    document.getElementById('carryforward-section').style.display='none';
+    cfBalance=0;
+    return;
+  }
+
+  prevPkgs.sort(function(a,b){
+    return new Date(b.issueDate) - new Date(a.issueDate);
+  });
+
   var lastPkg = prevPkgs[0];
+
   cfBalance = lastPkg.remainingBalance||0;
-  document.getElementById('carryforward-section').style.display = 'block';
+
+  document.getElementById('carryforward-section').style.display='block';
+
   document.getElementById('cf-details').innerHTML =
-    'Previous balance from <strong>'+(lastPkg.cardNumber||lastPkg.packageType)+'</strong>: ' +
+    'Previous balance from <strong>'+(lastPkg.cardNumber||lastPkg.packageType)+'</strong>: '+
     '<span style="font-weight:700;color:'+(cfBalance>=0?'var(--green)':'var(--red)')+'">'+fmtINR(cfBalance)+'</span>';
+
   updateCarryForward();
 }
+
 function updateCarryForward() {
+
   var pkgVal  = parseFloat(document.getElementById('pkg-value').value)||0;
   var cfEl    = document.getElementById('cf-enabled');
+
   var enabled = cfEl ? cfEl.checked : false;
   var carry   = (enabled && cfBalance) ? cfBalance : 0;
+
   var final   = pkgVal + carry;
-  document.getElementById('pkg-final-balance').value = (pkgVal>0||carry!==0) ? final : '';
+
+  document.getElementById('pkg-final-balance').value =
+    (pkgVal>0 || carry!==0) ? final : '';
 }
+
 function searchClientForPkg() {
+
   var q = document.getElementById('pkg-client-search').value.toLowerCase();
   var resultsDiv = document.getElementById('pkg-client-results');
+
   if (!q) { resultsDiv.style.display='none'; return; }
-  var matches = state.clients.filter(function(c){ return c.name.toLowerCase().includes(q)||(c.phone||'').includes(q); }).slice(0,8);
-  if (!matches.length) { resultsDiv.style.display='none'; return; }
-  resultsDiv.style.display = 'block';
-  resultsDiv.innerHTML = matches.map(function(c) {
+
+  var matches = state.clients.filter(function(c){
+    return c.name.toLowerCase().includes(q) || (c.phone||'').includes(q);
+  }).slice(0,8);
+
+  if (!matches.length) {
+    resultsDiv.style.display='none';
+    return;
+  }
+
+  resultsDiv.style.display='block';
+
+  resultsDiv.innerHTML = matches.map(function(c){
     return '<div class="client-dropdown-item" onclick="selectClientForPkg(\''+c.id+'\')">' +
       '<strong>'+c.name+'</strong> <span style="color:var(--text3);font-size:0.85rem">'+(c.phone||'')+'</span></div>';
   }).join('');
 }
+
 function selectClientForPkg(id) {
+
   var c = state.clients.find(function(x){return x.id===id;});
   if (!c) return;
+
   document.getElementById('pkg-client-id').value = id;
   document.getElementById('pkg-client-search').value = c.name;
+
   document.getElementById('pkg-client-results').style.display = 'none';
-  document.getElementById('pkg-client-selected').textContent = '✓ '+c.name+' — '+(c.phone||'')+'';
+
+  document.getElementById('pkg-client-selected').textContent =
+    '✓ '+c.name+' — '+(c.phone||'');
+
   document.getElementById('pkg-client-selected').style.display = 'block';
+
   checkCarryForward(id);
   updateCarryForward();
 }
+
 async function savePackage() {
+
   var id        = document.getElementById('pkg-id').value;
   var clientID  = document.getElementById('pkg-client-id').value;
+
   var pkgType   = document.getElementById('pkg-type').value;
+
   var issueDate = document.getElementById('pkg-issue').value;
   var expiryDate= document.getElementById('pkg-expiry').value;
-  if (!clientID)  { showToast('Please select a client', 'error'); return; }
-  if (!pkgType)   { showToast('Please select package type', 'error'); return; }
-  if (!issueDate) { showToast('Please enter issue date', 'error'); return; }
+
+  if (!clientID)  { showToast('Please select a client','error'); return; }
+  if (!pkgType)   { showToast('Please select package type','error'); return; }
+  if (!issueDate) { showToast('Please enter issue date','error'); return; }
+
   var cfEl = document.getElementById('cf-enabled');
+
   var data = {
-    clientID: clientID, cardNumber: document.getElementById('pkg-card').value.trim(),
-    packageType: pkgType, amountPaid: parseFloat(document.getElementById('pkg-paid').value)||0,
+
+    clientID: clientID,
+    cardNumber: document.getElementById('pkg-card').value.trim(),
+
+    packageType: pkgType,
+
+    amountPaid: parseFloat(document.getElementById('pkg-paid').value)||0,
     totalValue: parseFloat(document.getElementById('pkg-value').value)||0,
-    issueDate: issueDate, expiryDate: expiryDate||addMonths(issueDate,(PKG_DEFS[pkgType]||{}).months||6),
+
+    issueDate: issueDate,
+    expiryDate: expiryDate || addMonths(issueDate,(PKG_DEFS[pkgType]||{}).months||6),
+
     remainingBalance: parseFloat(document.getElementById('pkg-final-balance').value)||0,
+
     carryForwardBalance: (cfEl&&cfEl.checked) ? cfBalance : 0,
+
     updatedAt: new Date().toISOString()
   };
+
   try {
-    if (id) { await db.collection('packages').doc(id).update(data); showToast('Package updated ✓'); }
-    else    { data.createdAt=new Date().toISOString(); await db.collection('packages').add(data); showToast('Package created ✓'); }
+
+    if (cfEl && cfEl.checked && cfBalance !== 0) {
+
+      var prevPkgs = state.packages
+        .filter(function(p){ return p.clientID===clientID; })
+        .sort(function(a,b){
+          return new Date(b.issueDate) - new Date(a.issueDate);
+        });
+
+      var prevPkg = prevPkgs[0];
+
+      if (prevPkg) {
+
+        await db.collection('packages').doc(prevPkg.id).update({
+
+          remainingBalance: 0,
+          expiryDate: issueDate,
+          updatedAt: new Date().toISOString()
+
+        });
+
+      }
+    }
+
+    if (id) {
+
+      await db.collection('packages').doc(id).update(data);
+      showToast('Package updated ✓');
+
+    } else {
+
+      data.createdAt=new Date().toISOString();
+      await db.collection('packages').add(data);
+      showToast('Package created ✓');
+
+    }
+
     closeModal('modal-package');
-    await loadPackages(); renderPackages();
-  } catch(e) { showToast('Error saving package: '+e.message, 'error'); }
+
+    await loadPackages();
+    renderPackages();
+
+  }
+  catch(e) {
+
+    showToast('Error saving package: '+e.message,'error');
+
+  }
 }
 
 // ══════════════════════════════════════════════════════
