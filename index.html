@@ -2097,22 +2097,27 @@ function autofillExpiry() {
 function checkCarryForward(clientId) {
 
   var prevPkgs = state.packages.filter(function(p){
-    return p.clientID===clientId;
+    return p.clientID === clientId;
   });
 
   if (!prevPkgs.length) {
     document.getElementById('carryforward-section').style.display='none';
-    cfBalance=0;
+    cfBalance = 0;
     return;
   }
 
+  function parseDate(d){
+    var parts = d.split('/');
+    return new Date(parts[2], parts[1]-1, parts[0]);
+  }
+
   prevPkgs.sort(function(a,b){
-    return new Date(b.issueDate) - new Date(a.issueDate);
+    return parseDate(b.issueDate) - parseDate(a.issueDate);
   });
 
   var lastPkg = prevPkgs[0];
 
-  cfBalance = lastPkg.remainingBalance||0;
+  cfBalance = lastPkg.remainingBalance || 0;
 
   document.getElementById('carryforward-section').style.display='block';
 
@@ -2122,7 +2127,7 @@ function checkCarryForward(clientId) {
 
   updateCarryForward();
 }
-
+  
 function updateCarryForward() {
 
   var pkgVal  = parseFloat(document.getElementById('pkg-value').value)||0;
