@@ -1587,6 +1587,7 @@ input[type="file"] {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-check-compat.js"></script>
 <script>
 // ══════════════════════════════════════════════════════
 // FIREBASE INIT
@@ -1600,6 +1601,11 @@ var firebaseConfig = {
   appId: "1:561071575794:web:ebd27bf025264a69f5766b"
 };
 firebase.initializeApp(firebaseConfig);
+const appCheck = firebase.appCheck();
+appCheck.activate(
+  "6LfVQJ0sAAAAAE695vBEpAY7UAF5953pHbP-4Wyj",
+  true
+);
 var db = firebase.firestore();
 
 // ══════════════════════════════════════════════════════
