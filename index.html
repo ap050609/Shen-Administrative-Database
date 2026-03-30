@@ -976,6 +976,78 @@ input[type="file"] {
 #eod-body table { margin-bottom: 16px; }
 #eod-body h3 { color: var(--text); font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin: 20px 0 12px; }
 
+/* ── SORTABLE COLUMN HEADERS ── */
+thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+thead th.sortable:hover { color: var(--teal); }
+thead th.sortable .sort-icon {
+  display: inline-block;
+  margin-left: 5px;
+  font-size: 0.7rem;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+thead th.sortable.sort-asc .sort-icon,
+thead th.sortable.sort-desc .sort-icon { opacity: 1; color: var(--teal); }
+thead th.sortable.sort-asc .sort-icon::after  { content: '▲'; }
+thead th.sortable.sort-desc .sort-icon::after { content: '▼'; }
+thead th.sortable:not(.sort-asc):not(.sort-desc) .sort-icon::after { content: '⇅'; }
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.filter-bar .search-bar { flex: 1; min-width: 200px; margin-bottom: 0; }
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.filter-chip:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+.filter-chip.active { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+
+/* ── NOTES PILL ── */
+.notes-pill {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--text3);
+  background: var(--surface2);
+  border-radius: 4px;
+  padding: 2px 7px;
+  vertical-align: middle;
+  cursor: default;
+}
+
+/* ── PACKAGE HISTORY ── */
+.pkg-history-table td { padding: 8px 10px; font-size: 0.83rem; border-bottom: 1px solid var(--border); }
+.pkg-history-table tr:last-child td { border-bottom: none; }
+.pkg-history-table th { background: var(--bg3); padding: 7px 10px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 600; }
+.pkg-detail-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.pkg-detail-meta-item { background: var(--bg3); border-radius: var(--radius-sm); padding: 10px 14px; }
+.pkg-detail-meta-item .lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-weight: 600; margin-bottom: 4px; }
+.pkg-detail-meta-item .val { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; color: var(--text); }
+
 @media print {
   .sidebar, .page-header .btn, button { display: none; }
   body { background: white; color: black; }
@@ -1073,7 +1145,7 @@ input[type="file"] {
       </div>
       <div class="dash-grid">
         <div class="card" style="margin-bottom:0">
-          <div class="card-header" style="margin-bottom:16px">⏰ Expiring Soon (30 Days)</div>
+          <div class="card-header" style="margin-bottom:16px">⏰ Expiring Soon (60 Days)</div>
           <div id="dash-expiring-list"><div class="loading-center"><div class="spinner"></div></div></div>
         </div>
         <div class="card" style="margin-bottom:0">
@@ -1093,13 +1165,24 @@ input[type="file"] {
         <button class="btn btn-primary" onclick="openNewClient()">+ New Client</button>
       </div>
       <div class="card">
-        <div class="search-bar">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="client-search" placeholder="Search by name, phone, or card number…" oninput="filterClients()">
+        <div class="filter-bar">
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="client-search" placeholder="Search by name, phone, card number, or notes…" oninput="filterClients()">
+          </div>
+          <span class="filter-chip" id="client-chip-active" onclick="toggleClientFilter('active',this)">Active Only</span>
+          <span class="filter-chip" id="client-chip-notes" onclick="toggleClientFilter('notes',this)">Has Notes</span>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Phone</th><th>Packages</th><th>Notes</th><th>Actions</th></tr></thead>
+            <thead><tr>
+              <th class="sortable" onclick="sortTable('clients','name',this)">Name<span class="sort-icon"></span></th>
+              <th>Phone</th>
+              <th class="sortable" onclick="sortTable('clients','pkgs',this)">Packages<span class="sort-icon"></span></th>
+              <th>Notes</th>
+              <th class="sortable" onclick="sortTable('clients','updatedAt',this)">Last Updated<span class="sort-icon"></span></th>
+              <th>Actions</th>
+            </tr></thead>
             <tbody id="clients-tbody"></tbody>
           </table>
         </div>
@@ -1116,9 +1199,11 @@ input[type="file"] {
         <button class="btn btn-primary" onclick="openNewPackage()">+ New Package</button>
       </div>
       <div class="card">
-        <div class="search-bar">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="pkg-search" placeholder="Search by client name, phone, or card number…" oninput="filterPackages()">
+        <div class="filter-bar">
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="pkg-search" placeholder="Search by client name, phone, card number, package type, or notes…" oninput="filterPackages()">
+          </div>
         </div>
         <div class="tabs">
           <button class="tab active" onclick="filterPackageStatus('all',this)">All</button>
@@ -1128,7 +1213,17 @@ input[type="file"] {
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Card #</th><th>Client</th><th>Package</th><th>Balance</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr>
+              <th class="sortable" onclick="sortTable('packages','cardNumber',this)">Card #<span class="sort-icon"></span></th>
+              <th class="sortable" onclick="sortTable('packages','clientName',this)">Client<span class="sort-icon"></span></th>
+              <th class="sortable" onclick="sortTable('packages','packageType',this)">Package<span class="sort-icon"></span></th>
+              <th class="sortable" onclick="sortTable('packages','remainingBalance',this)">Balance<span class="sort-icon"></span></th>
+              <th class="sortable" onclick="sortTable('packages','expiryDate',this)">Expiry<span class="sort-icon"></span></th>
+              <th>Status</th>
+              <th>Notes</th>
+              <th class="sortable" onclick="sortTable('packages','updatedAt',this)">Last Updated<span class="sort-icon"></span></th>
+              <th>Actions</th>
+            </tr></thead>
             <tbody id="packages-tbody"></tbody>
           </table>
         </div>
@@ -1145,13 +1240,26 @@ input[type="file"] {
         <button class="btn btn-primary" onclick="openNewRedemption()">+ New Redemption</button>
       </div>
       <div class="card">
-        <div class="search-bar">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="redemption-search" placeholder="Search by client name or card number…" oninput="filterRedemptions()">
+        <div class="filter-bar">
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="redemption-search" placeholder="Search by client name, card number, service, or therapist…" oninput="filterRedemptions()">
+          </div>
+          <span class="filter-chip" id="redeem-chip-today" onclick="toggleRedemptionFilter('today',this)">Today</span>
+          <span class="filter-chip" id="redeem-chip-week" onclick="toggleRedemptionFilter('week',this)">This Week</span>
+          <span class="filter-chip" id="redeem-chip-month" onclick="toggleRedemptionFilter('month',this)">This Month</span>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Date</th><th>Client</th><th>Card #</th><th>Services</th><th>Total</th><th>Actions</th></tr></thead>
+            <thead><tr>
+              <th class="sortable sort-desc" onclick="sortTable('redemptions','date',this)">Date<span class="sort-icon"></span></th>
+              <th class="sortable" onclick="sortTable('redemptions','clientName',this)">Client<span class="sort-icon"></span></th>
+              <th>Card #</th>
+              <th>Services</th>
+              <th class="sortable" onclick="sortTable('redemptions','totalAmount',this)">Total<span class="sort-icon"></span></th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr></thead>
             <tbody id="redemptions-tbody"></tbody>
           </table>
         </div>
@@ -1361,6 +1469,10 @@ input[type="file"] {
         <label>Final Starting Balance (₹)</label>
         <input type="number" id="pkg-final-balance" readonly class="final-balance-input">
       </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="pkg-notes" rows="2" placeholder="Any notes about this package…"></textarea>
+      </div>
       <div class="form-actions">
         <button class="btn btn-secondary" onclick="closeModal('modal-package')">Cancel</button>
         <button class="btn btn-primary" onclick="savePackage()">Save Package</button>
@@ -1434,6 +1546,10 @@ input[type="file"] {
         </div>
         <div style="text-align:right;margin-top:8px;font-size:0.85rem;color:var(--text3)">
           Balance after: <strong id="redeem-after-val" style="font-size:1rem">—</strong>
+        </div>
+        <div class="form-group" style="margin-top:16px">
+          <label>Notes (optional)</label>
+          <textarea id="redeem-notes" rows="2" placeholder="Any notes about this redemption…"></textarea>
         </div>
         <div class="form-actions">
           <button class="btn btn-secondary" onclick="closeModal('modal-redemption')">Cancel</button>
@@ -1567,6 +1683,17 @@ input[type="file"] {
   </div>
 </div>
 
+<!-- Package Detail / Redemption History Modal -->
+<div class="modal-overlay" id="modal-pkg-detail">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="pkg-detail-title">Package Details</h2>
+      <button class="modal-close" onclick="closeModal('modal-pkg-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="pkg-detail-body"></div>
+  </div>
+</div>
+
 <!-- Confirm Dialog -->
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
@@ -1618,7 +1745,10 @@ var state = {
   pkgStatusFilter: 'all',
   selectedPkgForRedeem: null,
   selectedClientForRedeem: null,
-  redeemItems: []
+  redeemItems: [],
+  sortState: { clients: { col: 'updatedAt', dir: 'desc' }, packages: { col: 'updatedAt', dir: 'desc' }, redemptions: { col: 'date', dir: 'desc' } },
+  clientFilters: {},
+  redemptionFilter: null
 };
 
 // ══════════════════════════════════════════════════════
@@ -1708,17 +1838,30 @@ function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
   var el = document.getElementById('page-' + page);
   if (el) el.classList.add('active');
-  // match nav item text
   var pageText = page.replace('import-export','import').replace(/-/g,' ');
   document.querySelectorAll('.nav-item').forEach(function(n) {
     if (n.textContent.toLowerCase().includes(pageText.toLowerCase())) n.classList.add('active');
   });
   if (page==='dashboard')     loadDashboard();
-  if (page==='clients')       renderClients();
-  if (page==='packages')      renderPackages();
-  if (page==='redemptions')   renderRedemptions();
+  if (page==='clients')     { applySortHeaders('clients');     renderClients(); }
+  if (page==='packages')    { applySortHeaders('packages');    renderPackages(); }
+  if (page==='redemptions') { applySortHeaders('redemptions'); renderRedemptions(); }
   if (page==='services')      renderServices();
   if (page==='therapists')    renderTherapists();
+}
+
+function applySortHeaders(table) {
+  var ss = state.sortState[table];
+  var pageId = table==='clients'?'page-clients':table==='packages'?'page-packages':'page-redemptions';
+  document.querySelectorAll('#'+pageId+' thead th.sortable').forEach(function(th){
+    th.classList.remove('sort-asc','sort-desc');
+    // derive column from onclick attribute
+    var fn = th.getAttribute('onclick')||'';
+    var match = fn.match(/'([^']+)'\s*,\s*this/);
+    if (match && match[1]===ss.col) {
+      th.classList.add(ss.dir==='asc'?'sort-asc':'sort-desc');
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════
@@ -1731,7 +1874,7 @@ async function initApp() {
   loadDashboard();
 }
 async function loadClients() {
-  var snap = await db.collection('clients').orderBy('name').get();
+  var snap = await db.collection('clients').orderBy('updatedAt','desc').get();
   state.clients = snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
 }
 async function loadPackages() {
@@ -1795,7 +1938,7 @@ function pkgStatus(pkg) {
   if (!pkg.expiryDate) return 'active';
   var d = daysUntil(pkg.expiryDate);
   if (d < 0) return 'expired';
-  if (d <= 30) return 'expiring';
+  if (d <= 60) return 'expiring';
   return 'active';
 }
 function pkgBadge(pkg) {
@@ -1873,28 +2016,94 @@ function loadDashboard() {
       }).join('') + '</tbody></table>';
 }
 
-// ══════════════════════════════════════════════════════
-// CLIENTS
-// ══════════════════════════════════════════════════════
-function renderClients(search) {
-  search = search||'';
-  var q = search.toLowerCase();
-  var list = state.clients;
-  if (q) list = list.filter(function(c){
-    return c.name.toLowerCase().includes(q)||(c.phone||''). includes(q)||
-      state.packages.filter(function(p){return p.clientID===c.id;}).some(function(p){return (p.cardNumber||'').toLowerCase().includes(q);});
+// ── SORT TABLE UTILITY ──
+function sortTable(table, col, thEl) {
+  var ss = state.sortState[table];
+  if (ss.col === col) { ss.dir = ss.dir === 'asc' ? 'desc' : 'asc'; }
+  else { ss.col = col; ss.dir = 'asc'; }
+  // Update header classes
+  var page = table === 'clients' ? 'page-clients' : table === 'packages' ? 'page-packages' : 'page-redemptions';
+  document.querySelectorAll('#'+page+' thead th.sortable').forEach(function(th) {
+    th.classList.remove('sort-asc','sort-desc');
   });
+  if (thEl) thEl.classList.add(ss.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+  if (table === 'clients')     filterClients();
+  if (table === 'packages')    filterPackages();
+  if (table === 'redemptions') filterRedemptions();
+}
+
+function toggleClientFilter(key, el) {
+  if (state.clientFilters[key]) { delete state.clientFilters[key]; el.classList.remove('active'); }
+  else { state.clientFilters[key] = true; el.classList.add('active'); }
+  filterClients();
+}
+function toggleRedemptionFilter(key, el) {
+  if (state.redemptionFilter === key) { state.redemptionFilter = null; el.classList.remove('active'); }
+  else {
+    state.redemptionFilter = key;
+    document.querySelectorAll('#page-redemptions .filter-chip').forEach(function(c){c.classList.remove('active');});
+    el.classList.add('active');
+  }
+  filterRedemptions();
+}
+
+function fmtRelDate(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso); var now = new Date();
+  var diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  if (diff < 2592000) return Math.floor(diff/86400) + 'd ago';
+  return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function renderClients(search) {
+  search = search || document.getElementById('client-search').value || '';
+  var q = search.toLowerCase();
+  var list = state.clients.slice();
+
+  // Text search — extended
+  if (q) list = list.filter(function(c) {
+    return c.name.toLowerCase().includes(q) ||
+      (c.phone||'').includes(q) ||
+      (c.notes||'').toLowerCase().includes(q) ||
+      state.packages.filter(function(p){return p.clientID===c.id;}).some(function(p){
+        return (p.cardNumber||'').toLowerCase().includes(q) ||
+               (p.packageType||'').toLowerCase().includes(q);
+      });
+  });
+
+  // Chip filters
+  if (state.clientFilters.active) list = list.filter(function(c){
+    return state.packages.some(function(p){return p.clientID===c.id && pkgStatus(p)!=='expired';});
+  });
+  if (state.clientFilters.notes) list = list.filter(function(c){ return c.notes && c.notes.trim(); });
+
+  // Sort
+  var ss = state.sortState.clients;
+  list.sort(function(a,b){
+    var av, bv;
+    if (ss.col==='name')      { av=a.name||''; bv=b.name||''; return ss.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); }
+    if (ss.col==='pkgs')      { av=state.packages.filter(function(p){return p.clientID===a.id;}).length; bv=state.packages.filter(function(p){return p.clientID===b.id;}).length; }
+    if (ss.col==='updatedAt') { av=a.updatedAt||a.createdAt||''; bv=b.updatedAt||b.createdAt||''; return ss.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); }
+    if (av===undefined) return 0;
+    return ss.dir==='asc' ? av-bv : bv-av;
+  });
+
   document.getElementById('clients-count').textContent = list.length + ' client(s)';
   var tbody = document.getElementById('clients-tbody');
-  if (!list.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">👥</div><p>No clients found.</p></div></td></tr>'; return; }
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">👥</div><p>No clients found.</p></div></td></tr>'; return; }
   tbody.innerHTML = list.map(function(c) {
     var pkgs = state.packages.filter(function(p){return p.clientID===c.id;});
     var hasActive = pkgs.some(function(p){return pkgStatus(p)!=='expired';});
+    var notesHtml = c.notes ? '<span class="notes-pill" title="'+c.notes.replace(/"/g,'&quot;')+'">'+c.notes+'</span>' : '<span style="color:var(--text3);font-size:0.8rem">—</span>';
     return '<tr>' +
       '<td><strong>'+c.name+'</strong></td>' +
       '<td style="color:var(--text2)">'+(c.phone||'—')+'</td>' +
       '<td>'+pkgs.length+' pkg(s) '+(hasActive?'<span class="badge badge-green">Active</span>':'')+'</td>' +
-      '<td style="color:var(--text3);font-size:0.83rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(c.notes||'')+'</td>' +
+      '<td>'+notesHtml+'</td>' +
+      '<td style="color:var(--text3);font-size:0.82rem">'+fmtRelDate(c.updatedAt||c.createdAt)+'</td>' +
       '<td style="white-space:nowrap">' +
         '<button class="btn btn-sm btn-secondary" onclick="editClient(\''+c.id+'\')" >Edit</button> ' +
         '<button class="btn btn-sm btn-primary" onclick="viewClientPackages(\''+c.id+'\')">Packages</button>' +
@@ -1953,51 +2162,153 @@ function viewClientPackages(cid) {
 // PACKAGES
 // ══════════════════════════════════════════════════════
 function renderPackages(search) {
-  search = search||'';
+  search = search || document.getElementById('pkg-search').value || '';
   var q = search.toLowerCase();
-  var list = state.packages;
+  var list = state.packages.slice();
 
-  if (state.pkgStatusFilter!=='all')
-    list = list.filter(function(p){return pkgStatus(p)===state.pkgStatusFilter;});
+  if (state.pkgStatusFilter !== 'all')
+    list = list.filter(function(p){ return pkgStatus(p) === state.pkgStatusFilter; });
 
   if (q)
     list = list.filter(function(p){
       return clientName(p.clientID).toLowerCase().includes(q) ||
         (p.cardNumber||'').toLowerCase().includes(q) ||
-        clientPhone(p.clientID).includes(q);
+        clientPhone(p.clientID).includes(q) ||
+        (p.packageType||'').toLowerCase().includes(q) ||
+        (p.notes||'').toLowerCase().includes(q);
     });
+
+  // Sort
+  var ss = state.sortState.packages;
+  list.sort(function(a,b){
+    var av, bv;
+    if (ss.col==='cardNumber')       { av=a.cardNumber||''; bv=b.cardNumber||''; return ss.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); }
+    if (ss.col==='clientName')       { av=clientName(a.clientID); bv=clientName(b.clientID); return ss.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); }
+    if (ss.col==='packageType')      { av=a.packageType||''; bv=b.packageType||''; return ss.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); }
+    if (ss.col==='remainingBalance') { av=a.remainingBalance||0; bv=b.remainingBalance||0; return ss.dir==='asc'?av-bv:bv-av; }
+    if (ss.col==='expiryDate')       { av=a.expiryDate||''; bv=b.expiryDate||''; return ss.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); }
+    if (ss.col==='updatedAt')        { av=a.updatedAt||a.createdAt||''; bv=b.updatedAt||b.createdAt||''; return ss.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); }
+    return 0;
+  });
 
   document.getElementById('packages-count').textContent = list.length + ' package(s)';
   var tbody = document.getElementById('packages-tbody');
 
   if (!list.length) {
-    tbody.innerHTML =
-      '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🎁</div><p>No packages found.</p></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">🎁</div><p>No packages found.</p></div></td></tr>';
     return;
   }
 
   tbody.innerHTML = list.map(function(p) {
-
-    var bal = p.remainingBalance||0;
-
+    var bal = p.remainingBalance || 0;
+    var redemCount = state.redemptions.filter(function(r){return r.packageID===p.id;}).length;
+    var notesHtml = p.notes ? '<span class="notes-pill" title="'+p.notes.replace(/"/g,'&quot;')+'">'+p.notes+'</span>' : '<span style="color:var(--text3);font-size:0.8rem">—</span>';
     return '<tr>' +
-      '<td><strong style="color:var(--teal)">'+(p.cardNumber||'—')+'</strong></td>' +
+      '<td><strong style="color:var(--teal);cursor:pointer" onclick="viewPackageDetail(\''+p.id+'\')">'+(p.cardNumber||'—')+'</strong></td>' +
       '<td><strong>'+clientName(p.clientID)+'</strong><br><span style="color:var(--text3);font-size:0.8rem">'+clientPhone(p.clientID)+'</span></td>' +
       '<td>'+(p.packageType||'—')+'</td>' +
       '<td style="font-weight:700;color:'+(bal<0?'var(--red)':'var(--green)')+'">'+fmtINR(bal)+'</td>' +
       '<td>'+fmtDate(p.expiryDate)+'</td>' +
       '<td>'+pkgBadge(p)+'</td>' +
+      '<td>'+notesHtml+'</td>' +
+      '<td style="color:var(--text3);font-size:0.82rem">'+fmtRelDate(p.updatedAt||p.createdAt)+'</td>' +
       '<td style="white-space:nowrap">' +
+        '<button class="btn-icon" title="View History ('+redemCount+' redemptions)" onclick="viewPackageDetail(\''+p.id+'\')" style="position:relative">📋'+(redemCount>0?'<span style="position:absolute;top:-2px;right:-2px;background:var(--teal);color:#0d1a1a;border-radius:50%;width:14px;height:14px;font-size:0.6rem;display:flex;align-items:center;justify-content:center;font-weight:700">'+redemCount+'</span>':'')+'</button> ' +
         '<button class="btn-icon" title="Redeem" onclick="openRedeemForPackage(\''+p.id+'\')">✅</button> ' +
         '<button class="btn-icon" title="Extend Expiry" onclick="openExtend(\''+p.id+'\')">📅</button> ' +
         '<button class="btn-icon" title="Edit" onclick="editPackage(\''+p.id+'\')">✏️</button>' +
       '</td></tr>';
-
   }).join('');
 }
 
 function filterPackages() {
   renderPackages(document.getElementById('pkg-search').value);
+}
+
+// ── VIEW PACKAGE DETAIL + REDEMPTION HISTORY ──
+function viewPackageDetail(pkgId) {
+  var p = state.packages.find(function(x){return x.id===pkgId;});
+  if (!p) return;
+  var client = state.clients.find(function(c){return c.id===p.clientID;});
+  var redemptions = state.redemptions
+    .filter(function(r){return r.packageID===pkgId;})
+    .sort(function(a,b){return b.date.localeCompare(a.date);});
+
+  var totalRedeemed = redemptions.reduce(function(s,r){return s+(r.totalAmount||0);},0);
+  var bal = p.remainingBalance||0;
+
+  document.getElementById('pkg-detail-title').textContent =
+    (p.cardNumber ? 'Card '+p.cardNumber+' — ' : '') + (p.packageType||'Package') + ' Details';
+
+  var metaHtml =
+    '<div class="pkg-detail-meta">' +
+      '<div class="pkg-detail-meta-item"><div class="lbl">Client</div><div class="val" style="font-size:0.95rem">'+(client?client.name:'Unknown')+'</div></div>' +
+      '<div class="pkg-detail-meta-item"><div class="lbl">Package Value</div><div class="val">'+fmtINR(p.totalValue)+'</div></div>' +
+      '<div class="pkg-detail-meta-item"><div class="lbl">Amount Paid</div><div class="val">'+fmtINR(p.amountPaid)+'</div></div>' +
+      '<div class="pkg-detail-meta-item"><div class="lbl">Total Redeemed</div><div class="val" style="color:var(--orange)">'+fmtINR(totalRedeemed)+'</div></div>' +
+      '<div class="pkg-detail-meta-item"><div class="lbl">Remaining</div><div class="val" style="color:'+(bal<0?'var(--red)':'var(--green)')+'">'+fmtINR(bal)+'</div></div>' +
+      '<div class="pkg-detail-meta-item"><div class="lbl">Issue Date</div><div class="val" style="font-size:0.9rem">'+fmtDate(p.issueDate)+'</div></div>' +
+      '<div class="pkg-detail-meta-item"><div class="lbl">Expiry</div><div class="val" style="font-size:0.9rem">'+fmtDate(p.expiryDate)+'</div></div>' +
+      '<div class="pkg-detail-meta-item"><div class="lbl">Status</div><div class="val" style="font-size:0.9rem">'+pkgBadge(p)+'</div></div>' +
+    '</div>';
+
+  if (p.notes) {
+    metaHtml += '<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:18px;font-size:0.88rem;color:var(--text2)"><span style="color:var(--text3);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;display:block;margin-bottom:4px">Package Notes</span>'+p.notes+'</div>';
+  }
+
+  var historyHtml;
+  if (!redemptions.length) {
+    historyHtml = '<div class="empty-state" style="padding:24px"><div class="empty-icon">📋</div><p>No redemptions yet for this package.</p></div>';
+  } else {
+    historyHtml =
+      '<table class="pkg-history-table" style="width:100%">' +
+      '<thead><tr><th>Date</th><th>Services</th><th>Therapists</th><th>Amount</th><th>Notes</th><th></th></tr></thead>' +
+      '<tbody>' +
+      redemptions.map(function(r){
+        var svcNames = (r.items||[]).map(function(i){return i.serviceName;}).join('<br>');
+        var thpNames = (r.items||[]).map(function(i){return i.therapistName||'—';}).join('<br>');
+        var notesCell = r.notes ? '<span class="notes-pill" title="'+r.notes.replace(/"/g,'&quot;')+'">'+r.notes+'</span>' : '<span style="color:var(--text3)">—</span>';
+        return '<tr>' +
+          '<td style="white-space:nowrap;color:var(--text2)">'+fmtDate(r.date)+'</td>' +
+          '<td style="font-size:0.82rem">'+svcNames+'</td>' +
+          '<td style="font-size:0.82rem;color:var(--text2)">'+thpNames+'</td>' +
+          '<td style="font-weight:700;color:var(--teal);font-family:var(--font-display)">'+fmtINR(r.totalAmount)+'</td>' +
+          '<td>'+notesCell+'</td>' +
+          '<td style="white-space:nowrap"><button class="btn btn-sm btn-danger" onclick="deleteRedemptionFromDetail(\''+r.id+'\',\''+pkgId+'\')">Delete</button></td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  document.getElementById('pkg-detail-body').innerHTML =
+    metaHtml +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+      '<div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);font-weight:600">Redemption History ('+redemptions.length+')</div>' +
+      '<button class="btn btn-sm btn-primary" onclick="closeModal(\'modal-pkg-detail\');openRedeemForPackage(\''+pkgId+'\')">+ New Redemption</button>' +
+    '</div>' +
+    historyHtml +
+    '<div class="form-actions" style="margin-top:16px">' +
+      '<button class="btn btn-secondary" onclick="closeModal(\'modal-pkg-detail\');editPackage(\''+pkgId+'\')">✏️ Edit Package</button>' +
+      '<button class="btn btn-secondary" onclick="closeModal(\'modal-pkg-detail\');openExtend(\''+pkgId+'\')">📅 Extend Expiry</button>' +
+    '</div>';
+
+  openModal('modal-pkg-detail');
+}
+
+async function deleteRedemptionFromDetail(rid, pkgId) {
+  var r = state.redemptions.find(function(x){return x.id===rid;});
+  if (!r) return;
+  var ok = await showConfirm('Delete Redemption','This will restore '+fmtINR(r.totalAmount)+' back to the package balance.','⚠️','Delete',true);
+  if (!ok) return;
+  var pkg = state.packages.find(function(p){return p.id===r.packageID;});
+  try {
+    if (pkg) await db.collection('packages').doc(pkg.id).update({ remainingBalance:(pkg.remainingBalance||0)+(r.totalAmount||0), updatedAt:new Date().toISOString() });
+    await db.collection('redemptions').doc(rid).delete();
+    showToast('Redemption deleted and balance restored');
+    await Promise.all([loadPackages(), loadRedemptions()]);
+    renderPackages(); renderRedemptions(); loadDashboard();
+    viewPackageDetail(pkgId); // refresh the detail view
+  } catch(e) { showToast('Error: '+e.message,'error'); }
 }
 
 function filterPackageStatus(s, btn) {
@@ -2026,6 +2337,7 @@ function openNewPackage(prefillClientId) {
   document.getElementById('pkg-expiry').value = '';
 
   document.getElementById('pkg-final-balance').value = '';
+  document.getElementById('pkg-notes').value = '';
 
   document.getElementById('carryforward-section').style.display = 'none';
   cfBalance = 0;
@@ -2066,6 +2378,7 @@ function editPackage(id) {
   document.getElementById('pkg-expiry').value = p.expiryDate||'';
 
   document.getElementById('pkg-final-balance').value = p.remainingBalance||'';
+  document.getElementById('pkg-notes').value = p.notes||'';
 
   document.getElementById('carryforward-section').style.display = 'none';
 
@@ -2224,6 +2537,8 @@ async function savePackage() {
 
     carryForwardBalance: (cfEl&&cfEl.checked) ? cfBalance : 0,
 
+    notes: document.getElementById('pkg-notes').value.trim(),
+
     updatedAt: new Date().toISOString()
   };
 
@@ -2309,25 +2624,65 @@ async function saveExtendExpiry() {
 // REDEMPTIONS LIST
 // ══════════════════════════════════════════════════════
 function renderRedemptions(search) {
-  search = search||'';
+  search = search || document.getElementById('redemption-search').value || '';
   var q = search.toLowerCase();
-  var list = state.redemptions;
+  var list = state.redemptions.slice();
+
+  // Text search — extended
   if (q) list = list.filter(function(r){
-    return clientName(r.clientID).toLowerCase().includes(q)||
-      ((state.packages.find(function(p){return p.id===r.packageID;})||{}).cardNumber||''). toLowerCase().includes(q);
+    var pkg = state.packages.find(function(p){return p.id===r.packageID;});
+    return clientName(r.clientID).toLowerCase().includes(q) ||
+      ((pkg&&pkg.cardNumber)||'').toLowerCase().includes(q) ||
+      (r.notes||'').toLowerCase().includes(q) ||
+      (r.items||[]).some(function(i){
+        return (i.serviceName||'').toLowerCase().includes(q) ||
+               (i.therapistName||'').toLowerCase().includes(q);
+      });
   });
+
+  // Date chip filters
+  if (state.redemptionFilter) {
+    var today = todayStr();
+    var now = new Date(today+'T12:00:00');
+    list = list.filter(function(r){
+      if (!r.date) return false;
+      if (state.redemptionFilter==='today') return r.date===today;
+      if (state.redemptionFilter==='week') {
+        var d = new Date(r.date+'T12:00:00');
+        var diff = (now-d)/86400000;
+        return diff>=0 && diff<7;
+      }
+      if (state.redemptionFilter==='month') {
+        return r.date.substring(0,7) === today.substring(0,7);
+      }
+      return true;
+    });
+  }
+
+  // Sort
+  var ss = state.sortState.redemptions;
+  list.sort(function(a,b){
+    var av, bv;
+    if (ss.col==='date')        { av=a.date||''; bv=b.date||''; return ss.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); }
+    if (ss.col==='clientName')  { av=clientName(a.clientID); bv=clientName(b.clientID); return ss.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av); }
+    if (ss.col==='totalAmount') { av=a.totalAmount||0; bv=b.totalAmount||0; return ss.dir==='asc'?av-bv:bv-av; }
+    return 0;
+  });
+
   document.getElementById('redemptions-count').textContent = list.length + ' redemption(s)';
   var tbody = document.getElementById('redemptions-tbody');
-  if (!list.length) { tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">✅</div><p>No redemptions found.</p></div></td></tr>'; return; }
-  tbody.innerHTML = list.slice(0,100).map(function(r) {
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">✅</div><p>No redemptions found.</p></div></td></tr>'; return; }
+  tbody.innerHTML = list.slice(0,150).map(function(r) {
     var pkg = state.packages.find(function(p){return p.id===r.packageID;});
     var svcNames = (r.items||[]).map(function(i){return i.serviceName;}).join(', ');
+    var notesHtml = r.notes ? '<span class="notes-pill" title="'+r.notes.replace(/"/g,'&quot;')+'">'+r.notes+'</span>' : '<span style="color:var(--text3);font-size:0.8rem">—</span>';
     return '<tr>' +
-      '<td style="color:var(--text2)">'+fmtDate(r.date)+'</td>' +
+      '<td style="color:var(--text2);white-space:nowrap">'+fmtDate(r.date)+'</td>' +
       '<td><strong>'+clientName(r.clientID)+'</strong></td>' +
       '<td style="color:var(--teal)">'+(pkg&&pkg.cardNumber||'—')+'</td>' +
-      '<td style="font-size:0.82rem;color:var(--text3);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+svcNames+'</td>' +
+      '<td style="font-size:0.82rem;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+svcNames+'</td>' +
       '<td style="font-weight:700;color:var(--teal);font-family:var(--font-display)">'+fmtINR(r.totalAmount)+'</td>' +
+      '<td>'+notesHtml+'</td>' +
       '<td style="white-space:nowrap">' +
         '<button class="btn btn-sm btn-secondary" onclick="viewRedemption(\''+r.id+'\')">View</button> ' +
         '<button class="btn btn-sm btn-danger" onclick="deleteRedemption(\''+r.id+'\')">Delete</button>' +
@@ -2346,6 +2701,7 @@ function viewRedemption(id) {
       '<div><div class="card-header">Card #</div><strong style="color:var(--teal)">'+(pkg&&pkg.cardNumber||'—')+'</strong></div>' +
       '<div><div class="card-header">Total</div><strong style="color:var(--teal);font-family:var(--font-display)">'+fmtINR(r.totalAmount)+'</strong></div>' +
     '</div>' +
+    (r.notes ? '<div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:0.88rem;color:var(--text2)"><span style="color:var(--text3);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;display:block;margin-bottom:4px">Notes</span>'+r.notes+'</div>' : '') +
     '<table><thead><tr><th>Service</th><th>Therapist</th><th>Amount</th></tr></thead><tbody>' +
     (r.items||[]).map(function(i){
       return '<tr><td>'+i.serviceName+'</td><td style="color:var(--text2)">'+(i.therapistName||'—')+'</td><td>'+fmtINR(i.amount)+'</td></tr>';
@@ -2389,6 +2745,7 @@ function resetRedeemStep1() {
   document.getElementById('redeem-step3').style.display = 'none';
   document.getElementById('redeem-search').value = '';
   document.getElementById('redeem-client-results').innerHTML = '';
+  document.getElementById('redeem-notes').value = '';
   state.selectedClientForRedeem = null;
   state.selectedPkgForRedeem    = null;
 }
@@ -2521,8 +2878,9 @@ async function confirmRedeem() {
   var ok = await showConfirm('Confirm Redemption', 'Deduct '+fmtINR(total)+' from '+client.name+'\'s package? New balance: '+fmtINR(newBal), '✅', 'Confirm Redemption', false);
   if (!ok) return;
   var date = document.getElementById('redeem-date').value||todayStr();
+  var notes = document.getElementById('redeem-notes').value.trim();
   try {
-    await db.collection('redemptions').add({ packageID:pkg.id, clientID:client.id, date:date, items:items, totalAmount:total, createdAt:new Date().toISOString() });
+    await db.collection('redemptions').add({ packageID:pkg.id, clientID:client.id, date:date, items:items, totalAmount:total, notes:notes, createdAt:new Date().toISOString() });
     await db.collection('packages').doc(pkg.id).update({ remainingBalance:newBal, updatedAt:new Date().toISOString() });
     showToast('Redemption of '+fmtINR(total)+' saved ✓');
     closeModal('modal-redemption');
@@ -2725,7 +3083,7 @@ function exportClients() {
   downloadExcel(data,'Shen_Clients');
 }
 function exportPackages() {
-  var data = state.packages.map(function(p){ return { CardNumber:p.cardNumber, Client:clientName(p.clientID), Phone:clientPhone(p.clientID), PackageType:p.packageType, AmountPaid:p.amountPaid, TotalValue:p.totalValue, RemainingBalance:p.remainingBalance, IssueDate:p.issueDate, ExpiryDate:p.expiryDate, Status:pkgStatus(p) }; });
+  var data = state.packages.map(function(p){ return { CardNumber:p.cardNumber, Client:clientName(p.clientID), Phone:clientPhone(p.clientID), PackageType:p.packageType, AmountPaid:p.amountPaid, TotalValue:p.totalValue, RemainingBalance:p.remainingBalance, IssueDate:p.issueDate, ExpiryDate:p.expiryDate, Status:pkgStatus(p), Notes:p.notes||'' }; });
   downloadExcel(data,'Shen_Packages');
 }
 function exportRedemptions() {
@@ -2733,7 +3091,7 @@ function exportRedemptions() {
   state.redemptions.forEach(function(r) {
     var pkg = state.packages.find(function(p){return p.id===r.packageID;});
     (r.items||[]).forEach(function(item){
-      rows.push({ Date:r.date, Client:clientName(r.clientID), CardNumber:(pkg&&pkg.cardNumber)||'', Service:item.serviceName, Therapist:item.therapistName, Amount:item.amount, TotalSession:r.totalAmount });
+      rows.push({ Date:r.date, Client:clientName(r.clientID), CardNumber:(pkg&&pkg.cardNumber)||'', Service:item.serviceName, Therapist:item.therapistName, Amount:item.amount, TotalSession:r.totalAmount, Notes:r.notes||'' });
     });
   });
   downloadExcel(rows,'Shen_Redemptions');
