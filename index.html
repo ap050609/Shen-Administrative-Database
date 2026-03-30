@@ -3049,19 +3049,48 @@ async function runImport() {
       localClients.push({ id:cref.id, name:String(name), phone:String(phone) });
       clientId = cref.id;
     } else { clientId = existing.id; }
-    var pkgRef = db.collection('packages').doc();
-    ops.push({ ref:pkgRef, data:{
-      clientID:clientId,
-      cardNumber:String(get(row,'cardNumber')||'')+'',
-      packageType:String(get(row,'packageType')||'')+'',
-      amountPaid:parseFloat(get(row,'amountPaid'))||0,
-      totalValue:parseFloat(get(row,'totalValue'))||0,
-      remainingBalance:parseFloat(get(row,'remainingBalance'))||0,
-      issueDate:String(get(row,'issueDate')||'')+'',
-      expiryDate:String(get(row,'expiryDate')||'')+'',
-      carryForwardBalance:parseFloat(get(row,'carryForwardBalance'))||0,
-      createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-    }});
+   var card = String(get(row,'cardNumber')||'').trim();
+
+if(!card){
+  console.warn('Skipping row without card number', row);
+  continue;
+}
+
+var existingPkg = state.packages.find(function(p){
+  return p.cardNumber === card;
+});
+
+var pkgRef;
+var data = {
+  clientID:clientId,
+  cardNumber:card,
+  packageType:String(get(row,'packageType')||''),
+  amountPaid:parseFloat(get(row,'amountPaid'))||0,
+  totalValue:parseFloat(get(row,'totalValue'))||0,
+  remainingBalance:parseFloat(get(row,'remainingBalance'))||0,
+  carryForwardBalance:parseFloat(get(row,'carryForwardBalance'))||0,
+  updatedAt:new Date().toISOString()
+};
+
+// Only overwrite dates if provided
+var issue = get(row,'issueDate');
+if(issue) data.issueDate = String(issue);
+
+var expiry = get(row,'expiryDate');
+if(expiry) data.expiryDate = String(expiry);
+
+if(existingPkg){
+  pkgRef = db.collection('packages').doc(existingPkg.id);
+} else {
+  pkgRef = db.collection('packages').doc();
+  data.createdAt = new Date().toISOString();
+}
+
+ops.push({
+  ref:pkgRef,
+  data:data,
+  merge:true
+});
     created++;
   }
   if (!created) { showToast('No valid rows to import', 'error'); return; }
